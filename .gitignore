@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+
+# Data files (too large for GitHub)
+data/raw/
+data/processed/
+*.csv
+*.xlsx
+
+# Conda / venv
+envs/
+.conda/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Streamlit
+.streamlit/secrets.toml 
