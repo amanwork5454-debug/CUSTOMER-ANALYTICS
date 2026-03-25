@@ -1,10 +1,9 @@
 streamlit==1.40.0
-pandas==2.2.0
-numpy==1.26.4
-scikit-learn==1.4.0
-plotly==5.18.0
-matplotlib==3.8.2
-seaborn==0.13.1
-openpyxl==3.1.2
+pandas
+numpy
+scikit-learn
+plotly
+matplotlib
+seaborn
+openpyxl
 altair==5.2.0
-pillow==10.2.0
