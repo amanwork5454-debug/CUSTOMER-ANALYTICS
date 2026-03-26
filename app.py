@@ -8,7 +8,7 @@ st.set_page_config(page_title="Customer Analytics Dashboard", layout="wide")
 st.title("🛍️ Customer Analytics & Sales Prediction")
 
 # ── Load Data ──
-df = pd.read_csv('data/cleaned_retail.csv')
+df = pd.read_csv('data/cleaned_retail_sample.csv')
 df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
 rfm = pd.read_csv('data/rfm.csv')
 
