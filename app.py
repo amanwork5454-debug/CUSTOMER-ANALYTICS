@@ -78,7 +78,8 @@ elif page == "Sales Prediction":
     col1, col2, col3 = st.columns(3)
     col1.metric("Best Model", model_name)
     col2.metric("R² Score", f"{model_r2:.2f}")
-    col3.metric("MAE", f"£{model_mae:,.0f}")
+    col3.metric("MAE", f"£{float(model_mae):,.0f}")
+    
 
     st.subheader("Predict Invoice Sales")
     c1, c2, c3, c4 = st.columns(4)
