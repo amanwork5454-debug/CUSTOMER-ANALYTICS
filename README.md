@@ -1,62 +1,74 @@
 # 🛍️ Customer Analytics & Sales Prediction
 
-An end-to-end data science project analyzing 500K+ retail transactions to uncover customer behavior patterns and predict future sales.
+An end-to-end Data Science project analyzing 500K+ retail transactions to uncover customer behavior and predict sales using Machine Learning.
 
 🔗 **Live Demo:** https://aman-customer-analytics.streamlit.app
 📂 **GitHub:** https://github.com/amanwork5454-debug/CUSTOMER-ANALYTICS
 
 ---
 
-## 📌 Project Overview
-This project analyzes the Online Retail UK dataset (541K rows, cleaned to 397K) to deliver actionable business insights through customer segmentation and sales forecasting.
+## 📌 Project Highlights
+- 📦 Real-world dataset: UCI Online Retail UK (541K rows → 397K after cleaning)
+- 👥 Customer Segmentation using RFM Analysis + K-Means Clustering
+- 🤖 Sales Prediction with 3 ML models compared
+- 📊 Interactive Streamlit dashboard deployed on cloud
+- ✅ Best Model: Linear Regression — R² = 0.83, CV R² = 0.65
 
 ---
 
-## ✨ Features
-- 🧹 **Data Cleaning** — Handled missing values, duplicates, outliers
-- 📈 **Exploratory Data Analysis** — Monthly sales trends, top products, top customers
-- 👥 **Customer Segmentation** — RFM Analysis + K-Means Clustering (3 segments)
-- 🤖 **Sales Prediction** — Random Forest Regressor (R² = 0.30)
-- 🖥️ **Interactive Dashboard** — 3-page Streamlit app deployed on cloud
+## 🔬 ML Model Comparison
+
+| Model | R² Score | MAE | CV R² |
+|-------|----------|-----|-------|
+| Linear Regression | **0.83** | £187 | 0.65 |
+| Gradient Boosting | 0.68 | £185 | 0.45 |
+| Random Forest | 0.56 | £181 | 0.60 |
+
+---
+
+## 🧠 Features Used for Prediction
+- Year, Month, Quarter
+- Day of Week, Day of Month, Is Weekend
+- Number of Items, Number of Products
+
+---
+
+## 📊 Dashboard Pages
+1. **Overview** — Revenue, customers, monthly sales trend, top products
+2. **Customer Segments** — RFM scatter plot, segment breakdown, data table
+3. **Sales Prediction** — Model metrics, feature importance, model comparison, live prediction
 
 ---
 
 ## 🛠️ Tech Stack
-| Category | Tools |
-|----------|-------|
-| Language | Python |
-| Data | Pandas, NumPy |
-| ML | Scikit-learn |
-| Visualization | Matplotlib, Seaborn, Plotly |
-| Dashboard | Streamlit |
-
----
-
-## 📊 Dataset
-- **Source:** UCI Online Retail UK Dataset
-- **Size:** 541K rows → 397K after cleaning
-- **Period:** Dec 2010 – Dec 2011
+- **Data:** Python, Pandas, NumPy
+- **ML:** Scikit-learn (LinearRegression, RandomForest, GradientBoosting)
+- **Visualization:** Matplotlib, Seaborn, Plotly
+- **Deployment:** Streamlit Cloud
+- **Version Control:** Git, GitHub
 
 ---
 
 ## 📁 Project Structure
 ```
 customer-analytics/
-├── app.py                  # Streamlit dashboard
-├── model.pkl               # Trained ML model
+├── app.py                    # Streamlit dashboard
+├── model.pkl                 # Trained ML model + metrics
 ├── requirements.txt
 ├── data/
 │   ├── cleaned_retail_sample.csv
-│   └── rfm.csv
+│   ├── rfm.csv
+│   └── model_comparison.csv
 └── notebooks/
     ├── 01_cleaning.py
     ├── 02_eda.py
     ├── 03_segmentation.py
-    └── 04_prediction.py
+    ├── 04_prediction.py
+    ├── feature_importance.png
+    ├── model_comparison.png
+    └── prediction.png
 ```
-
----
 
 ## 👤 Author
 **Aman Pokhriyal**
-📧 amanwork5454@gmail.com
+- GitHub: https://github.com/amanwork5454-debug
