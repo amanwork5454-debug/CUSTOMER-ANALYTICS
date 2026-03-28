@@ -11,15 +11,18 @@ st.title("🛍️ Customer Analytics & Sales Prediction")
 df = pd.read_csv('data/cleaned_retail_sample.csv')
 df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
 rfm = pd.read_csv('data/rfm.csv')
+comparison = pd.read_csv('data/model_comparison.csv')
 
 # ── Load Model ──
 with open('model.pkl', 'rb') as f:
     model_data = pickle.load(f)
-model = model_data['model']
+model      = model_data['model']
 model_name = model_data['model_name']
-model_r2 = model_data['r2']
-model_mae = model_data['mae']
-model_rmse = model_data['rmse']
+model_r2   = float(model_data['r2'])
+model_mae  = float(model_data['mae'])
+model_rmse = float(model_data['rmse'])
+cv_mean    = float(model_data['cv_mean'])
+cv_std     = float(model_data['cv_std'])
 
 # ── Sidebar ──
 st.sidebar.title("Navigation")
@@ -47,7 +50,8 @@ if page == "Overview":
     st.subheader("Top 10 Products")
     top_products = df.groupby('Description')['Quantity'].sum().sort_values(ascending=False).head(10)
     fig2, ax2 = plt.subplots(figsize=(10, 4))
-    sns.barplot(x=top_products.values, y=top_products.index, ax=ax2, palette='viridis', hue=top_products.index, legend=False)
+    sns.barplot(x=top_products.values, y=top_products.index, ax=ax2,
+                palette='viridis', hue=top_products.index, legend=False)
     plt.tight_layout()
     st.pyplot(fig2)
 
@@ -57,17 +61,19 @@ if page == "Overview":
 elif page == "Customer Segments":
     st.header("👥 Customer Segmentation (RFM)")
     col1, col2, col3 = st.columns(3)
-    col1.metric("High Value Customers", len(rfm[rfm['Segment'] == 'High Value']))
+    col1.metric("High Value Customers",   len(rfm[rfm['Segment'] == 'High Value']))
     col2.metric("Medium Value Customers", len(rfm[rfm['Segment'] == 'Medium Value']))
-    col3.metric("Low Value Customers", len(rfm[rfm['Segment'] == 'Low Value']))
+    col3.metric("Low Value Customers",    len(rfm[rfm['Segment'] == 'Low Value']))
 
     st.subheader("Customer Segments Scatter Plot")
     fig, ax = plt.subplots(figsize=(10, 5))
-    sns.scatterplot(data=rfm, x='Recency', y='Monetary', hue='Segment', palette='Set1', ax=ax)
+    sns.scatterplot(data=rfm, x='Recency', y='Monetary',
+                    hue='Segment', palette='Set1', ax=ax)
     st.pyplot(fig)
 
     st.subheader("RFM Data Table")
-    st.dataframe(rfm[['CustomerID', 'Recency', 'Frequency', 'Monetary', 'Segment']].head(50))
+    st.dataframe(rfm[['CustomerID', 'Recency', 'Frequency',
+                       'Monetary', 'Segment']].head(50))
 
 # ══════════════════════════════
 # PAGE 3: SALES PREDICTION
@@ -75,13 +81,26 @@ elif page == "Customer Segments":
 elif page == "Sales Prediction":
     st.header("📈 Sales Prediction")
 
-    col1, col2, col3 = st.columns(3)
+    # ── Model Performance Metrics ──
+    col1, col2, col3, col4 = st.columns(4)
     col1.metric("Best Model", model_name)
     col2.metric("R² Score", f"{model_r2:.2f}")
-    col3.metric("MAE", f"£{float(model_mae):,.0f}")
-    
+    col3.metric("MAE", f"£{model_mae:,.0f}")
+    col4.metric("CV R² (5-fold)", f"{cv_mean:.2f} ± {cv_std:.2f}")
 
-    st.subheader("Predict Invoice Sales")
+    # ── Model Comparison Table ──
+    st.subheader("📊 Model Comparison")
+    st.dataframe(comparison, use_container_width=True)
+
+    # ── Model Comparison Chart ──
+    st.image('notebooks/model_comparison.png')
+
+    # ── Feature Importance ──
+    st.subheader("🔍 Feature Importance (Random Forest)")
+    st.image('notebooks/feature_importance.png')
+
+    # ── Predict ──
+    st.subheader("🔮 Predict Invoice Sales")
     c1, c2, c3, c4 = st.columns(4)
     year         = c1.selectbox("Year", [2011, 2012])
     month        = c2.selectbox("Month", list(range(1, 13)))
@@ -98,7 +117,7 @@ elif page == "Sales Prediction":
         features = [[year, month, day_of_week, day_of_month,
                      quarter, is_weekend, num_items, num_products]]
         pred = model.predict(features)[0]
-        st.success(f"Predicted Invoice Sales: £{pred:,.2f}")
+        st.success(f"🎯 Predicted Invoice Sales: £{pred:,.2f}")
 
     st.subheader("Actual vs Predicted (Test Set)")
     st.image('notebooks/prediction.png')
