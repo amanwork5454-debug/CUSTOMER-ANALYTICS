@@ -1,9 +1,13 @@
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Load cleaned data
-df = pd.read_csv('data/cleaned_retail.csv')
+# Load cleaned data (fall back to sample CSV if full file is not present)
+_data_path = 'data/cleaned_retail.csv'
+if not os.path.exists(_data_path):
+    _data_path = 'data/cleaned_retail_sample.csv'
+df = pd.read_csv(_data_path)
 df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
 
 # Extract month-year
