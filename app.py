@@ -24,10 +24,10 @@ df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
 rfm = pd.read_csv('data/rfm.csv')
 comparison = pd.read_csv('data/model_comparison.csv')
 
-# ── Load Model ──
+# ── Load Model (sklearn Pipeline) ──
 with open('model.pkl', 'rb') as f:
     model_data = pickle.load(f)
-model      = model_data['model']
+model      = model_data['model']   # sklearn Pipeline (scaler + best model)
 model_name = model_data['model_name']
 model_r2   = float(model_data['r2'])
 model_mae  = float(model_data['mae'])
@@ -37,7 +37,8 @@ cv_std     = float(model_data['cv_std'])
 
 # ── Sidebar ──
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Overview", "Customer Segments", "Sales Prediction", "Churn Analysis"])
+page = st.sidebar.radio("Go to", ["Overview", "Customer Segments", "Sales Prediction",
+                                   "Sales Forecast", "Churn Analysis"])
 
 # ══════════════════════════════
 # PAGE 1: OVERVIEW
@@ -96,6 +97,24 @@ elif page == "Customer Segments":
     col2.metric("Medium Value Customers", len(rfm[rfm['Segment'] == 'Medium Value']))
     col3.metric("Low Value Customers",    len(rfm[rfm['Segment'] == 'Low Value']))
 
+    # ── CLV Metric Cards ──
+    if 'CLV_Estimated' in rfm.columns:
+        st.subheader("💰 Customer Lifetime Value (CLV)")
+        st.markdown(
+            "Estimated CLV uses the formula: **CLV ≈ Monetary × Frequency × e^(−Recency/365)** "
+            "— rewarding frequent, high-spend, recently active customers."
+        )
+        avg_clv_col, median_clv_col, high_value_avg_col, total_portfolio_col = st.columns(4)
+        avg_clv_col.metric("Avg CLV",    f"£{rfm['CLV_Estimated'].mean():,.0f}")
+        median_clv_col.metric("Median CLV", f"£{rfm['CLV_Estimated'].median():,.0f}")
+        high_value_avg_col.metric("High Value Avg CLV",
+                        f"£{rfm[rfm['Segment']=='High Value']['CLV_Estimated'].mean():,.0f}")
+        total_portfolio_col.metric("Total Portfolio CLV",
+                        f"£{rfm['CLV_Estimated'].sum():,.0f}")
+
+        st.subheader("CLV Distribution by Segment")
+        st.image('notebooks/clv_distribution.png', use_container_width=True)
+
     st.subheader("Customer Segments Scatter Plot")
     fig, ax = plt.subplots(figsize=(10, 5))
     sns.scatterplot(data=rfm, x='Recency', y='Monetary',
@@ -153,8 +172,121 @@ elif page == "Sales Prediction":
     st.subheader("Actual vs Predicted (Test Set)")
     st.image('notebooks/prediction.png')
 
+    # ── Model Explainability (SHAP) ──
+    st.subheader("🧠 Model Explainability — SHAP Values (XGBoost)")
+    st.markdown(
+        "**SHAP (SHapley Additive exPlanations)** shows the contribution of each feature "
+        "to the model's prediction. Longer bars = more influential features. "
+        "Unlike standard feature importance, SHAP is model-agnostic and theoretically grounded."
+    )
+    st.image('notebooks/shap_summary.png', use_container_width=True)
+    st.info(
+        "💡 **Interview tip**: SHAP is the industry standard for explaining ML predictions. "
+        "It answers 'why did the model predict X?' — critical for stakeholder communication "
+        "and model debugging."
+    )
+
 # ══════════════════════════════
-# PAGE 4: CHURN ANALYSIS
+# PAGE 4: SALES FORECAST
+# ══════════════════════════════
+elif page == "Sales Forecast":
+    st.header("📅 Time-Series Sales Forecast (Prophet)")
+    st.markdown(
+        "Using **Meta's Prophet** library, we fit a logistic-growth model on monthly revenue "
+        "and generate a **3-month forward forecast** with 90% confidence intervals."
+    )
+
+    try:
+        forecast_df = pd.read_csv('data/forecast.csv')
+        forecast_df['ds'] = pd.to_datetime(forecast_df['ds'])
+
+        actuals = forecast_df[~forecast_df['is_forecast']].copy()
+        future  = forecast_df[forecast_df['is_forecast']].copy()
+
+        # ── Monthly Revenue KPIs ──
+        last_actual_rev = actuals['yhat'].iloc[-1]
+        next_month_rev  = future['yhat'].iloc[0] if len(future) > 0 else 0
+        total_forecast  = future['yhat'].sum()
+
+        last_month_col, next_month_col, total_forecast_col = st.columns(3)
+        last_month_col.metric("Last Actual Month (£)", f"£{last_actual_rev:,.0f}")
+        next_month_col.metric("Next Month Forecast",   f"£{next_month_rev:,.0f}")
+        total_forecast_col.metric("3-Month Total Forecast", f"£{total_forecast:,.0f}")
+
+        # ── Interactive Plotly Forecast Chart ──
+        st.subheader("Interactive Forecast Chart")
+        # Load actual monthly revenue from the transaction data
+        df['MonthStart'] = df['InvoiceDate'].dt.to_period('M').dt.to_timestamp()
+        monthly_actual = df.groupby('MonthStart')['TotalPrice'].sum().reset_index()
+        monthly_actual.columns = ['ds', 'actual_revenue']
+
+        fig_fc = go.Figure()
+
+        # Actual revenue line
+        fig_fc.add_trace(go.Scatter(
+            x=monthly_actual['ds'], y=monthly_actual['actual_revenue'],
+            name='Actual Revenue', mode='lines+markers',
+            line=dict(color='steelblue', width=2), marker=dict(size=6)
+        ))
+
+        # Fitted (historical) with CI
+        fig_fc.add_trace(go.Scatter(
+            x=actuals['ds'], y=actuals['yhat_upper'],
+            line=dict(width=0), showlegend=False, hoverinfo='skip'
+        ))
+        fig_fc.add_trace(go.Scatter(
+            x=actuals['ds'], y=actuals['yhat_lower'],
+            fill='tonexty', fillcolor='rgba(255,165,0,0.15)',
+            line=dict(width=0), name='Historical CI', hoverinfo='skip'
+        ))
+
+        # Forecast with CI
+        fig_fc.add_trace(go.Scatter(
+            x=future['ds'], y=future['yhat_upper'],
+            line=dict(width=0), showlegend=False, hoverinfo='skip'
+        ))
+        fig_fc.add_trace(go.Scatter(
+            x=future['ds'], y=future['yhat_lower'],
+            fill='tonexty', fillcolor='rgba(220,20,60,0.2)',
+            line=dict(width=0), name='Forecast 90% CI', hoverinfo='skip'
+        ))
+        fig_fc.add_trace(go.Scatter(
+            x=future['ds'], y=future['yhat'],
+            name='3-Month Forecast', mode='lines+markers',
+            line=dict(color='crimson', width=2, dash='dot'),
+            marker=dict(size=8, symbol='diamond')
+        ))
+
+        fig_fc.update_layout(
+            xaxis_title='Month', yaxis_title='Revenue (£)',
+            title='Monthly Revenue — Prophet Forecast',
+            legend=dict(x=0.01, y=0.99), height=420
+        )
+        st.plotly_chart(fig_fc, use_container_width=True)
+
+        # ── Forecast Table ──
+        st.subheader("📋 3-Month Forecast Detail")
+        display_future = future[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].copy()
+        display_future['ds'] = display_future['ds'].dt.strftime('%B %Y')
+        display_future = display_future.rename(columns={
+            'ds': 'Month', 'yhat': 'Forecast (£)',
+            'yhat_lower': 'Lower Bound (£)', 'yhat_upper': 'Upper Bound (£)'
+        })
+        display_future[['Forecast (£)', 'Lower Bound (£)', 'Upper Bound (£)']] = \
+            display_future[['Forecast (£)', 'Lower Bound (£)', 'Upper Bound (£)']].round(0)
+        st.dataframe(display_future, use_container_width=True)
+
+        st.info(
+            "💡 **About Prophet**: Developed by Meta, Prophet handles seasonality, holidays, "
+            "and trend changes out-of-the-box. It's widely used in industry for business "
+            "forecasting tasks. Run `notebooks/06_forecasting.py` to regenerate."
+        )
+
+    except FileNotFoundError:
+        st.warning("Forecast data not found. Run `notebooks/06_forecasting.py` to generate it.")
+
+# ══════════════════════════════
+# PAGE 5: CHURN ANALYSIS
 # ══════════════════════════════
 elif page == "Churn Analysis":
     st.header("🚨 Customer Churn Analysis")

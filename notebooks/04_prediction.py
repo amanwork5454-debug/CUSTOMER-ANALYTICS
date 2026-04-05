@@ -4,11 +4,23 @@ from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from xgboost import XGBRegressor
+import shap
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pickle
+import os
 
-# Load cleaned data
-df = pd.read_csv('data/cleaned_retail.csv')
+MODEL_XGBOOST = 'XGBoost'
+
+# Load cleaned data (use sample CSV if full file not present)
+_data_path = 'data/cleaned_retail.csv'
+if not os.path.exists(_data_path):
+    _data_path = 'data/cleaned_retail_sample.csv'
+df = pd.read_csv(_data_path)
 df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
 
 # ── Feature Engineering ──
@@ -48,7 +60,9 @@ OVERFITTING_GAP_THRESHOLD = 0.15
 models = {
     'Linear Regression': LinearRegression(),
     'Random Forest':     RandomForestRegressor(n_estimators=200, max_depth=10, random_state=42),
-    'Gradient Boosting': GradientBoostingRegressor(n_estimators=200, max_depth=5, random_state=42)
+    'Gradient Boosting': GradientBoostingRegressor(n_estimators=200, max_depth=5, random_state=42),
+    MODEL_XGBOOST:       XGBRegressor(n_estimators=200, max_depth=5, learning_rate=0.1,
+                                      random_state=42, verbosity=0)
 }
 
 results = {}
@@ -111,20 +125,22 @@ ax.set_title('Feature Importance (Random Forest)')
 ax.set_xlabel('Importance Score')
 plt.tight_layout()
 plt.savefig('notebooks/feature_importance.png')
-plt.show()
+plt.close()
 print("✅ Feature importance chart saved")
 
 # ── Model Comparison Bar Chart ──
 comp = comparison_df.set_index('Model')
-fig, ax = plt.subplots(figsize=(8, 4))
-comp['R²'].plot(kind='bar', ax=ax, color=['steelblue','orange','green'], edgecolor='black')
+fig, ax = plt.subplots(figsize=(9, 4))
+comp['R²'].plot(kind='bar', ax=ax,
+                color=['steelblue', 'orange', 'green', 'crimson'],
+                edgecolor='black')
 ax.set_title('Model Comparison — R² Score')
 ax.set_ylabel('R² Score')
 ax.set_ylim(0, 1)
 plt.xticks(rotation=15)
 plt.tight_layout()
 plt.savefig('notebooks/model_comparison.png')
-plt.show()
+plt.close()
 print("✅ Model comparison chart saved")
 
 # ── Actual vs Predicted Plot ──
@@ -136,12 +152,37 @@ plt.title(f'Actual vs Predicted Sales ({best_name})')
 plt.legend()
 plt.tight_layout()
 plt.savefig('notebooks/prediction.png')
-plt.show()
+plt.close()
 print("✅ Prediction chart saved")
 
-# ── Save Best Model ──
+# ── SHAP Explainability ──
+# Use XGBoost model (or best tree model) for SHAP values
+shap_model_name = MODEL_XGBOOST if MODEL_XGBOOST in results else best_name
+shap_raw_model = results[shap_model_name]['model']
+print(f"\nComputing SHAP values for: {shap_model_name}")
+explainer   = shap.TreeExplainer(shap_raw_model)
+shap_values = explainer.shap_values(X_test)
+
+plt.figure(figsize=(9, 5))
+shap.summary_plot(shap_values, X_test, feature_names=features,
+                  plot_type='bar', show=False)
+plt.title(f'SHAP Feature Importance — {shap_model_name}')
+plt.tight_layout()
+plt.savefig('notebooks/shap_summary.png', bbox_inches='tight')
+plt.close()
+print("✅ SHAP summary plot saved")
+
+# ── Build sklearn Pipeline (best model wrapped with scaler) ──
+# For tree models the scaler is a no-op but wrapping shows production-readiness.
+pipeline = Pipeline([
+    ('scaler', StandardScaler()),
+    ('model',  best['model'])
+])
+pipeline.fit(X_train, y_train)
+
+# ── Save Pipeline & Metadata ──
 model_data = {
-    'model':      best['model'],
+    'model':      pipeline,        # sklearn Pipeline (scaler + best model)
     'features':   features,
     'model_name': best_name,
     'r2':         best['r2'],
@@ -152,4 +193,4 @@ model_data = {
 }
 with open('model.pkl', 'wb') as f:
     pickle.dump(model_data, f)
-print("✅ Model saved as model.pkl")
+print("✅ Pipeline saved as model.pkl")
