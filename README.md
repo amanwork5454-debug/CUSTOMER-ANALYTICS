@@ -163,13 +163,14 @@ Key finding: **Recency is by far the most important churn predictor** (feature i
 customer-analytics/
 ├── app.py                      # Streamlit dashboard (5 pages)
 ├── model.pkl                   # Best sales prediction pipeline (scaler + model)
-├── requirements.txt
+├── requirements.txt            # Python dependencies
+├── packages.txt                # System-level packages (for Streamlit Cloud)
+├── runtime.txt                 # Python runtime version pin
 ├── data/
 │   ├── cleaned_retail_sample.csv
 │   ├── rfm.csv                  # RFM + CLV data
 │   ├── model_comparison.csv
-│   ├── forecast.csv             # Prophet 3-month forecast output
-│   └── high_risk_customers.csv
+│   └── forecast.csv             # Prophet 3-month forecast output
 └── notebooks/
     ├── 01_cleaning.py           # Data cleaning pipeline
     ├── 02_eda.py                # Exploratory data analysis
@@ -180,6 +181,42 @@ customer-analytics/
     ├── 07_clv.py                # Customer Lifetime Value estimation
     └── *.png                    # Generated charts (SHAP, forecast, CLV, etc.)
 ```
+
+---
+
+## 🚀 How to Run Locally
+
+**Prerequisites:** Python 3.11
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/amanwork5454-debug/CUSTOMER-ANALYTICS.git
+cd CUSTOMER-ANALYTICS
+
+# 2. Create and activate a virtual environment
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. (Optional) Re-run the notebook pipeline to regenerate artifacts
+#    The repo already includes pre-built data/ and model.pkl so this step is optional.
+python notebooks/01_cleaning.py
+python notebooks/02_eda.py
+python notebooks/03_segmentation.py
+python notebooks/04_prediction.py
+python notebooks/05_churn.py
+python notebooks/06_forecasting.py
+python notebooks/07_clv.py
+
+# 5. Launch the Streamlit app
+streamlit run app.py
+```
+
+The app will open at **http://localhost:8501** in your browser.
+
+> **Note:** The `data/` folder and `model.pkl` are already committed to the repo, so you can skip step 4 and go straight to step 5 for a quick local run.
 
 ---
 
