@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
 import matplotlib.pyplot as plt
 import pickle
@@ -35,10 +35,14 @@ features = ['Year', 'Month', 'DayOfWeek', 'DayOfMonth',
 X = invoice_df[features]
 y = invoice_df['TotalSales']
 
-# ── Train/Test Split ──
-split = int(0.8 * len(invoice_df))
-X_train, X_test = X.iloc[:split], X.iloc[split:]
-y_train, y_test = y.iloc[:split], y.iloc[split:]
+# ── Train/Test Split (shuffle=False preserves time order) ──
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, shuffle=False
+)
+print(f"Train size: {len(X_train)}, Test size: {len(X_test)}")
+
+# Gap threshold: warn if test R² exceeds CV R² by more than this amount
+OVERFITTING_GAP_THRESHOLD = 0.15
 
 # ── Train & Evaluate All Models ──
 models = {
@@ -58,7 +62,7 @@ for name, m in models.items():
     mae  = mean_absolute_error(y_test, y_pred)
     rmse = np.sqrt(mean_squared_error(y_test, y_pred))
 
-    # Cross Validation
+    # Cross-Validation on full dataset (5-fold, time-aware shuffle=False)
     cv_scores = cross_val_score(m, X, y, cv=5, scoring='r2')
     cv_mean   = cv_scores.mean()
     cv_std    = cv_scores.std()
@@ -81,6 +85,8 @@ for name, m in models.items():
     print(f"  MAE       : £{mae:,.2f}")
     print(f"  RMSE      : £{rmse:,.2f}")
     print(f"  CV R²     : {cv_mean:.4f} ± {cv_std:.4f}")
+    if r2 - cv_mean > OVERFITTING_GAP_THRESHOLD:
+        print(f"  ⚠️  Gap between test R² and CV R² ({r2 - cv_mean:.2f}) suggests overfitting on test split.")
 
 # ── Save Model Comparison Table ──
 comparison_df = pd.DataFrame(comparison_rows)
@@ -88,10 +94,12 @@ comparison_df.to_csv('data/model_comparison.csv', index=False)
 print("\nModel Comparison:")
 print(comparison_df)
 
-# ── Pick Best Model ──
-best_name = max(results, key=lambda x: results[x]['r2'])
+# ── Pick Best Model by CV R² (more robust than test R²) ──
+# Using CV R² as the selection criterion avoids picking a model that got
+# lucky on a particular test split.
+best_name = max(results, key=lambda x: results[x]['cv_mean'])
 best = results[best_name]
-print(f"\n✅ Best Model: {best_name} (R² = {best['r2']:.4f})")
+print(f"\n✅ Best Model by CV R²: {best_name} (CV R² = {best['cv_mean']:.4f}, Test R² = {best['r2']:.4f})")
 
 # ── Feature Importance (Random Forest) ──
 rf_model = results['Random Forest']['model']
