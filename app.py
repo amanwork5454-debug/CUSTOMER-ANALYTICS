@@ -35,6 +35,24 @@ model_rmse = float(model_data['rmse'])
 cv_mean    = float(model_data['cv_mean'])
 cv_std     = float(model_data['cv_std'])
 
+@st.cache_resource
+def train_churn_models(_rfm):
+    """Train churn classifiers once and cache across page loads."""
+    churn_df = _rfm[['Recency', 'Frequency', 'Monetary']].copy()
+    churn_df['Churned'] = (_rfm['Recency'] > 90).astype(int)
+    X_c = churn_df[['Recency', 'Frequency', 'Monetary']]
+    y_c = churn_df['Churned']
+    scaler_c = StandardScaler()
+    X_scaled = scaler_c.fit_transform(X_c)
+    X_train_c, X_test_c, y_train_c, y_test_c = train_test_split(
+        X_scaled, y_c, test_size=0.2, random_state=42, stratify=y_c
+    )
+    lr_clf = LogisticRegression(random_state=42, max_iter=1000)
+    rf_clf = RandomForestClassifier(n_estimators=100, random_state=42)
+    lr_clf.fit(X_train_c, y_train_c)
+    rf_clf.fit(X_train_c, y_train_c)
+    return scaler_c, X_scaled, X_train_c, X_test_c, y_train_c, y_test_c, lr_clf, rf_clf
+
 # ── Sidebar ──
 st.sidebar.title("Navigation")
 page = st.sidebar.radio("Go to", ["Overview", "Customer Segments", "Sales Prediction",
@@ -315,21 +333,8 @@ elif page == "Churn Analysis":
     col2.metric("Churned (>90 days)", f"{churned_count:,}", delta=f"{churned_count/total*100:.1f}%", delta_color="inverse")
     col3.metric("Active Customers", f"{active_count:,}", delta=f"{active_count/total*100:.1f}%")
 
-    # ── Train classifier ──
-    X_c = churn_df[['Recency', 'Frequency', 'Monetary']]
-    y_c = churn_df['Churned']
-
-    scaler_c = StandardScaler()
-    X_scaled = scaler_c.fit_transform(X_c)
-
-    X_train_c, X_test_c, y_train_c, y_test_c = train_test_split(
-        X_scaled, y_c, test_size=0.2, random_state=42, stratify=y_c
-    )
-
-    lr_clf = LogisticRegression(random_state=42, max_iter=1000)
-    rf_clf = RandomForestClassifier(n_estimators=100, random_state=42)  # reduced for fast on-the-fly training in the app
-    lr_clf.fit(X_train_c, y_train_c)
-    rf_clf.fit(X_train_c, y_train_c)
+    # ── Load cached classifiers (trained once per session) ──
+    scaler_c, X_scaled, X_train_c, X_test_c, y_train_c, y_test_c, lr_clf, rf_clf = train_churn_models(rfm)
 
     lr_pred = lr_clf.predict(X_test_c)
     rf_pred = rf_clf.predict(X_test_c)

@@ -1,7 +1,5 @@
 import pandas as pd
 import numpy as np
-from sklearn.linear_model import Ridge
-from sklearn.model_selection import cross_val_score
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
