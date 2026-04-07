@@ -15,8 +15,85 @@ from sklearn.metrics import (
     roc_auc_score, roc_curve, accuracy_score
 )
 
-st.set_page_config(page_title="Customer Analytics Dashboard", layout="wide")
-st.title("🛍️ Customer Analytics & Sales Prediction")
+st.set_page_config(
+    page_title="Customer Analytics Dashboard",
+    page_icon="🛍️",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# ── Global CSS ──
+st.markdown("""
+<style>
+/* ── Font & base ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+
+/* ── Sidebar ── */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+}
+[data-testid="stSidebar"] * { color: #e2e8f0 !important; }
+[data-testid="stSidebar"] .stRadio label { font-size: 0.95rem; }
+[data-testid="stSidebar"] hr { border-color: #334155; }
+
+/* ── Metric cards ── */
+[data-testid="metric-container"] {
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+[data-testid="metric-container"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+}
+[data-testid="metric-container"] label { color: #94a3b8 !important; font-size: 0.8rem !important; text-transform: uppercase; letter-spacing: .06em; }
+[data-testid="metric-container"] [data-testid="stMetricValue"] { color: #f1f5f9 !important; font-size: 1.6rem !important; font-weight: 700; }
+[data-testid="metric-container"] [data-testid="stMetricDelta"] { font-size: 0.82rem !important; }
+
+/* ── Buttons ── */
+.stButton > button {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white !important;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 28px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    transition: opacity .2s ease, transform .15s ease;
+}
+.stButton > button:hover { opacity: 0.88; transform: translateY(-1px); }
+
+/* ── DataFrames ── */
+[data-testid="stDataFrame"] { border-radius: 10px; overflow: hidden; }
+
+/* ── Info / warning / success boxes ── */
+[data-testid="stNotification"] { border-radius: 10px; }
+
+/* ── Page banner helper class ── */
+.page-banner {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
+    border-radius: 14px;
+    padding: 24px 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 6px 24px rgba(99,102,241,0.3);
+}
+.page-banner h1 { color: white !important; font-size: 2rem; font-weight: 700; margin: 0 0 4px 0; }
+.page-banner p  { color: rgba(255,255,255,0.82); font-size: 1rem; margin: 0; }
+
+/* ── Section divider ── */
+.section-divider {
+    height: 2px;
+    background: linear-gradient(90deg, #6366f1, transparent);
+    border: none;
+    margin: 24px 0;
+    border-radius: 2px;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ── Load Data ──
 df = pd.read_csv('data/cleaned_retail_sample.csv')
@@ -54,15 +131,42 @@ def train_churn_models(_rfm):
     return scaler_c, X_scaled, X_train_c, X_test_c, y_train_c, y_test_c, lr_clf, rf_clf
 
 # ── Sidebar ──
-st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Overview", "Customer Segments", "Sales Prediction",
-                                   "Sales Forecast", "Churn Analysis"])
+st.sidebar.markdown("""
+<div style="text-align:center; padding: 8px 0 16px 0;">
+    <div style="font-size:2.4rem;">🛍️</div>
+    <div style="font-size:1.1rem; font-weight:700; color:#f1f5f9; letter-spacing:.04em;">Customer Analytics</div>
+    <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">End-to-End ML Dashboard</div>
+</div>
+<hr style="border-color:#334155; margin-bottom:12px;"/>
+""", unsafe_allow_html=True)
+
+page = st.sidebar.radio("📂 Navigate", ["Overview", "Customer Segments", "Sales Prediction",
+                                         "Sales Forecast", "Churn Analysis"])
+
+st.sidebar.markdown("""
+<hr style="border-color:#334155; margin:16px 0 12px 0;"/>
+<div style="font-size:0.72rem; color:#64748b; text-align:center; line-height:1.6;">
+    <b style="color:#94a3b8;">Tech Stack</b><br>
+    Python · Pandas · XGBoost<br>
+    SHAP · Prophet · sklearn<br>
+    Plotly · Streamlit Cloud
+</div>
+<hr style="border-color:#334155; margin:12px 0;"/>
+<div style="font-size:0.72rem; color:#64748b; text-align:center;">
+    Built by <b style="color:#94a3b8;">Aman Pokhriyal</b>
+</div>
+""", unsafe_allow_html=True)
 
 # ══════════════════════════════
 # PAGE 1: OVERVIEW
 # ══════════════════════════════
 if page == "Overview":
-    st.header("📊 Business Overview")
+    st.markdown("""
+    <div class="page-banner">
+        <h1>📊 Business Overview</h1>
+        <p>High-level KPIs, monthly revenue trends, top products and markets</p>
+    </div>
+    """, unsafe_allow_html=True)
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Revenue", f"£{df['TotalPrice'].sum():,.0f}")
     col2.metric("Total Customers", f"{df['CustomerID'].nunique():,}")
@@ -109,7 +213,12 @@ if page == "Overview":
 # PAGE 2: CUSTOMER SEGMENTS
 # ══════════════════════════════
 elif page == "Customer Segments":
-    st.header("👥 Customer Segmentation (RFM)")
+    st.markdown("""
+    <div class="page-banner">
+        <h1>👥 Customer Segmentation</h1>
+        <p>RFM Analysis · Customer Lifetime Value · Segment breakdown</p>
+    </div>
+    """, unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3)
     col1.metric("High Value Customers",   len(rfm[rfm['Segment'] == 'High Value']))
     col2.metric("Medium Value Customers", len(rfm[rfm['Segment'] == 'Medium Value']))
@@ -147,7 +256,12 @@ elif page == "Customer Segments":
 # PAGE 3: SALES PREDICTION
 # ══════════════════════════════
 elif page == "Sales Prediction":
-    st.header("📈 Sales Prediction")
+    st.markdown("""
+    <div class="page-banner">
+        <h1>📈 Sales Prediction</h1>
+        <p>XGBoost regression · 4-model comparison · SHAP explainability · Live predictor</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     # ── Model Performance Metrics ──
     col1, col2, col3, col4 = st.columns(4)
@@ -204,7 +318,12 @@ elif page == "Sales Prediction":
 # PAGE 4: SALES FORECAST
 # ══════════════════════════════
 elif page == "Sales Forecast":
-    st.header("📅 Time-Series Sales Forecast (Prophet)")
+    st.markdown("""
+    <div class="page-banner">
+        <h1>📅 Sales Forecast</h1>
+        <p>Meta Prophet · 3-month revenue forecast · 90% confidence intervals</p>
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown(
         "Using **Meta's Prophet** library, we fit a logistic-growth model on monthly revenue "
         "and generate a **3-month forward forecast** with 90% confidence intervals."
@@ -303,7 +422,12 @@ elif page == "Sales Forecast":
 # PAGE 5: CHURN ANALYSIS
 # ══════════════════════════════
 elif page == "Churn Analysis":
-    st.header("🚨 Customer Churn Analysis")
+    st.markdown("""
+    <div class="page-banner">
+        <h1>🚨 Churn Analysis</h1>
+        <p>Binary classification · ROC-AUC evaluation · Live churn risk predictor</p>
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown(
         "Customers who haven't purchased in **90+ days** are classified as **churned**. "
         "We train a classifier on RFM features to predict churn risk."
@@ -408,3 +532,14 @@ elif page == "Churn Analysis":
             st.warning(f"🟡 Medium Churn Risk — {churn_prob:.1%} probability. Monitor this customer.")
         else:
             st.success(f"✅ Low Churn Risk — {churn_prob:.1%} probability. Customer looks healthy!")
+
+# ── Footer ──
+st.markdown("""
+<hr style="border:none; border-top:1px solid #334155; margin-top:48px;"/>
+<div style="text-align:center; padding:16px 0 8px 0; color:#64748b; font-size:0.8rem;">
+    Built by <b style="color:#94a3b8;">Aman Pokhriyal</b> &nbsp;·&nbsp;
+    Python · XGBoost · SHAP · Prophet · Streamlit &nbsp;·&nbsp;
+    <a href="https://github.com/amanwork5454-debug/CUSTOMER-ANALYTICS"
+       style="color:#6366f1; text-decoration:none;">GitHub ↗</a>
+</div>
+""", unsafe_allow_html=True)
