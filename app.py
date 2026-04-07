@@ -198,11 +198,7 @@ elif page == "Sales Prediction":
         "Unlike standard feature importance, SHAP is model-agnostic and theoretically grounded."
     )
     st.image('notebooks/shap_summary.png', use_container_width=True)
-    st.info(
-        "💡 **Interview tip**: SHAP is the industry standard for explaining ML predictions. "
-        "It answers 'why did the model predict X?' — critical for stakeholder communication "
-        "and model debugging."
-    )
+
 
 # ══════════════════════════════
 # PAGE 4: SALES FORECAST
